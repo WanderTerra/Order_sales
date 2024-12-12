@@ -93,7 +93,7 @@ def capturar_tracking_numbers(browser):
         tabelas_itens = browser.find_elements(By.XPATH, '//table[contains(@class, "sales-order-items")]')
         
         tracking_numbers = []
-        
+        print(tracking_numbers)
         for tabela in tabelas_itens:
             # Encontrar todas as linhas da tabela de itens
             linhas_itens = tabela.find_elements(By.XPATH, './/tbody/tr')
@@ -181,12 +181,12 @@ def verificar_order_status(browser):
                                 tracking_numbers = capturar_tracking_numbers(browser)
                                 print(f"Números de rastreamento: {tracking_numbers}")
                                 
-                                # Verificar o status de entrega para cada número de rastreamento
-                                for tracking_number in tracking_numbers:
-                                    if verificar_status_entrega(browser, tracking_number):
-                                        print(f"O número de rastreamento {tracking_number} foi entregue.")
-                                    else:
-                                        print(f"O número de rastreamento {tracking_number} não foi entregue.")
+                                # # Verificar o status de entrega para cada número de rastreamento
+                                # for tracking_number in tracking_numbers:
+                                #     if verificar_status_entrega(browser, tracking_number):
+                                #         print(f"O número de rastreamento {tracking_number} foi entregue.")
+                                #     else:
+                                #         print(f"O número de rastreamento {tracking_number} não foi entregue.")
                                 
                             except Exception as e:
                                 print(f"Erro ao clicar no botão de expandir: {e}")
