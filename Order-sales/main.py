@@ -115,16 +115,16 @@ def capturar_tracking_numbers(browser):
         print(f"Erro ao capturar os números de rastreamento: {e}")
         return []
     
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+
+
 
 def verificar_status_entrega(browser, tracking_number):
     try:
         # Abrir uma nova janela
-        browser.execute_script("window.open('about:blank', '_blank', 'width=800,height=600');")
+        browser.execute_script("window.open('about:blank', '_blank');")
         time.sleep(1)  # Adicionar uma pequena pausa para garantir que a janela seja aberta
         browser.switch_to.window(browser.window_handles[-1])
+        browser.maximize_window()
         
         # Navegar para a URL fornecida
         browser.get('https://pathfinder.automationanywhere.com/challenges/salesorder-tracking.html#')
@@ -150,7 +150,7 @@ def verificar_status_entrega(browser, tracking_number):
         status_element = browser.find_element(By.XPATH, '//*[@id="shipmentStatus"]/tr[3]/td[2]')
         status = status_element.text.strip()
         print(f"Status do rastreamento {tracking_number}: {status}")
-        
+        time.sleep(1)
         # Fechar a janela e voltar para a janela original
         browser.close()
         browser.switch_to.window(browser.window_handles[0])
@@ -211,12 +211,22 @@ def verificar_order_status(browser):
                                         break  # Sair do loop for e continuar com o próximo item da lista principal
                                 
                                 if todos_entregues:
-                                    # Clicar no botão correspondente
+                                    # Clicar no botão correspondente para gerar fatura
                                     clicar_elemento(browser, By.ID, 'salesOrderDataTable')
                                     print("Botão de gerar fatura clicado.")
                                     time.sleep(2)
+                                else:
+                                    # Clicar no botão "Close"
+                                    try:
+                                        botao_fechar = browser.find_element(By.XPATH, '//button[contains(@onclick, "cancel")]')
+                                        botao_fechar.click()
+                                        print("Botão de fechar clicado.")
+                                        time.sleep(2)
+                                    except Exception as e:
+                                        print(f"Erro ao clicar no botão de fechar: {e}")
                             except Exception as e:
                                 print(f"Erro ao processar o número de rastreamento: {e}")
+                                
                     except Exception as e:
                         print(f"Erro ao processar a linha da tabela: {e}")
         except Exception as e:
