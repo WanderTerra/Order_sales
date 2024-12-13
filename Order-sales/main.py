@@ -6,7 +6,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import Select
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
@@ -29,32 +28,21 @@ def clicar_elemento(browser, by, value):
             EC.presence_of_element_located((by, value))
         )
         elemento.click()
-        
-
-        
     except Exception as e:
         print(f"Erro ao clicar no elemento: {e}")
-        
+
 def acessar_sistema(browser):
     clicar_elemento(browser, By.ID, 'onetrust-accept-btn-handler')
     clicar_elemento(browser, By.ID, 'button_modal-login-btn__iPh6x')
     time.sleep(1)
 
-    # usuario_field = WebDriverWait(browser, 10).until(
-    #         EC.presence_of_element_located((By.CSS_SELECTOR, 'input[id="43:2;a"]'))
-    #     )
-    # usuario_field.send_keys(usuario_aut_any)
     clicar_elemento(browser, By.ID, '43:2;a')
     pyautogui.write(usuario_aut_any)
     pyautogui.press('enter')
-    # senha_field = WebDriverWait(browser, 10).until(
-    #         EC.presence_of_element_located((By.CSS_SELECTOR, 'input[id="10:148;a"]'))
-    #     )
-    # senha_field.send_keys(senha_aut_any)
     clicar_elemento(browser, By.ID, '10:148;a')
     pyautogui.write(senha_aut_any)
     pyautogui.press('enter')
-    
+
 def login(browser):
     try:
         # --------------------------------- LOGIN ---------------------------------
@@ -74,7 +62,6 @@ def login(browser):
         
     except Exception as e:
         print(f"Erro ao fazer login: {e}")
-        
 
 def selecionar_numero_itens(browser):
     try:
@@ -92,14 +79,13 @@ def selecionar_numero_itens(browser):
         
     except Exception as e:
         print(f"Erro ao selecionar o número de itens: {e}")
-        
+
 def capturar_tracking_numbers(browser):
     try:
         # Encontrar todas as tabelas de itens de pedidos expandidos
         tabelas_itens = browser.find_elements(By.XPATH, '//table[contains(@class, "sales-order-items")]')
         
         tracking_numbers = []
-        print(tracking_numbers)
         for tabela in tabelas_itens:
             # Encontrar todas as linhas da tabela de itens
             linhas_itens = tabela.find_elements(By.XPATH, './/tbody/tr')
@@ -114,9 +100,6 @@ def capturar_tracking_numbers(browser):
     except Exception as e:
         print(f"Erro ao capturar os números de rastreamento: {e}")
         return []
-    
-
-
 
 def verificar_status_entrega(browser, tracking_number):
     try:
@@ -174,63 +157,59 @@ def verificar_order_status(browser):
         
         # Selecionar a visualização de 50 itens
         selecionar_numero_itens(browser)
-        try:
-            while True:
-                # Encontrar todas as linhas da tabela
-                linhas = browser.find_elements(By.XPATH, '//table[@id="salesOrderDataTable"]/tbody/tr')
-                
-                for linha in linhas:
+        
+        # Encontrar todas as linhas da tabela
+        linhas = browser.find_elements(By.XPATH, '//table[@id="salesOrderDataTable"]/tbody/tr')
+        
+        for linha in linhas:
+            try:
+                # Obter o status do pedido
+                status = linha.find_element(By.XPATH, './td[5]').text
+                # Verificar se o status é "Confirmed" ou "Delivery Outstanding"
+                if status in ["Confirmed", "Delivery Outstanding"]:
+                    print(f"Status do pedido: {status}")    
                     try:
-                        # Obter o status do pedido
-                        status = linha.find_element(By.XPATH, './td[5]').text
-                        # Verificar se o status é "Confirmed" ou "Delivery Outstanding"
-                        if status in ["Confirmed", "Delivery Outstanding"]:
-                            print(f"Status do pedido: {status}")    
+                        # Clicar no botão de "+"
+                        botao_expandir = linha.find_element(By.XPATH, './/i[contains(@class, "fa-square-plus")]')
+                        botao_expandir.click()
+                        
+                        # Adicionar uma pausa após o clique no botão de "+"
+                        time.sleep(0.5)
+                        
+                        # Capturar os números de rastreamento
+                        tracking_numbers = capturar_tracking_numbers(browser)
+                        print(f"Números de rastreamento: {tracking_numbers}")
+                        
+                        # Verificar o status de entrega para cada número de rastreamento
+                        todos_entregues = True
+                        for tracking_number in tracking_numbers:
+                            status = verificar_status_entrega(browser, tracking_number)
+                            
+                            if status == 'Delivered':
+                                print(f"O número de rastreamento {tracking_number} foi entregue.")
+                            else:
+                                print(f"O número de rastreamento {tracking_number} não foi entregue. Status: {status}")
+                                todos_entregues = False
+                                break  # Sair do loop for e continuar com o próximo item da lista principal
+                        
+                        if todos_entregues:
+                            # Clicar no botão correspondente para gerar fatura
+                            clicar_elemento(browser, By.ID, 'salesOrderDataTable')
+                            print("Botão de gerar fatura clicado.")
+                            time.sleep(2)
+                        else:
+                            # Clicar no botão "Close"
                             try:
-                                # Clicar no botão de "+"
-                                botao_expandir = linha.find_element(By.XPATH, './/i[contains(@class, "fa-square-plus")]')
-                                botao_expandir.click()
-                                
-                                # Adicionar uma pausa após o clique no botão de "+"
-                                time.sleep(0.5)
-                                
-                                # Capturar os números de rastreamento
-                                tracking_numbers = capturar_tracking_numbers(browser)
-                                print(f"Números de rastreamento: {tracking_numbers}")
-                                
-                                # Verificar o status de entrega para cada número de rastreamento
-                                todos_entregues = True
-                                for tracking_number in tracking_numbers:
-                                    status = verificar_status_entrega(browser, tracking_number)
-                                    
-                                    if status == 'Delivered':
-                                        print(f"O número de rastreamento {tracking_number} foi entregue.")
-                                    else:
-                                        print(f"O número de rastreamento {tracking_number} não foi entregue. Status: {status}")
-                                        todos_entregues = False
-                                        break  # Sair do loop for e continuar com o próximo item da lista principal
-                                
-                                if todos_entregues:
-                                    # Clicar no botão correspondente para gerar fatura
-                                    clicar_elemento(browser, By.ID, 'salesOrderDataTable')
-                                    print("Botão de gerar fatura clicado.")
-                                    time.sleep(2)
-                                else:
-                                    # Clicar no botão "Close"
-                                    try:
-                                        botao_fechar = browser.find_element(By.XPATH, '//button[contains(@onclick, "cancel")]')
-                                        botao_fechar.click()
-                                        print("Botão de fechar clicado.")
-                                        time.sleep(2)
-                                    except Exception as e:
-                                        print(f"Erro ao clicar no botão de fechar: {e}")
+                                botao_fechar = browser.find_element(By.XPATH, '//button[contains(@onclick, "cancel")]')
+                                botao_fechar.click()
+                                print("Botão de fechar clicado.")
+                                time.sleep(2)
                             except Exception as e:
-                                print(f"Erro ao processar o número de rastreamento: {e}")
-                                
+                                print(f"Erro ao clicar no botão de fechar: {e}")
                     except Exception as e:
-                        print(f"Erro ao processar a linha da tabela: {e}")
-        except Exception as e:
-            print(f"Erro ao encontrar as linhas da tabela: {e}")
+                        print(f"Erro ao processar o número de rastreamento: {e}")
+            except Exception as e:
+                print(f"Erro ao processar a linha da tabela: {e}")
                 
     except Exception as e:
         print(f"Erro ao verificar o status do pedido: {e}")
@@ -260,10 +239,13 @@ def main():
 
         login(browser)
         verificar_order_status(browser)
-        time.sleep(0.5)
+        
+        # Adicionar uma pausa maior para visualizar o momento em que os botões são clicados
+        time.sleep(5)
     except Exception as e:
         print(f"Erro ao iniciar o ChromeDriver: {e}")
     finally:
+        # Fechar todas as janelas
         browser.quit()
 
 if __name__ == '__main__':
