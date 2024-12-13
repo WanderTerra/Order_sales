@@ -30,7 +30,7 @@ def clicar_elemento(browser, by, value):
         )
         elemento.click()
         
-        time.sleep(0.5)
+
         
     except Exception as e:
         print(f"Erro ao clicar no elemento: {e}")
@@ -38,15 +38,21 @@ def clicar_elemento(browser, by, value):
 def acessar_sistema(browser):
     clicar_elemento(browser, By.ID, 'onetrust-accept-btn-handler')
     clicar_elemento(browser, By.ID, 'button_modal-login-btn__iPh6x')
-    usuario_field = WebDriverWait(browser, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, 'input[id="43:2;a"]'))
-        )
-    usuario_field.send_keys(usuario_aut_any)
+    time.sleep(1)
+
+    # usuario_field = WebDriverWait(browser, 10).until(
+    #         EC.presence_of_element_located((By.CSS_SELECTOR, 'input[id="43:2;a"]'))
+    #     )
+    # usuario_field.send_keys(usuario_aut_any)
+    clicar_elemento(browser, By.ID, '43:2;a')
+    pyautogui.write(usuario_aut_any)
     pyautogui.press('enter')
-    senha_field = WebDriverWait(browser, 10).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, 'input[id="10:148;a"]'))
-        )
-    senha_field.send_keys(senha_aut_any)
+    # senha_field = WebDriverWait(browser, 10).until(
+    #         EC.presence_of_element_located((By.CSS_SELECTOR, 'input[id="10:148;a"]'))
+    #     )
+    # senha_field.send_keys(senha_aut_any)
+    clicar_elemento(browser, By.ID, '10:148;a')
+    pyautogui.write(senha_aut_any)
     pyautogui.press('enter')
     
 def login(browser):
@@ -109,8 +115,17 @@ def capturar_tracking_numbers(browser):
         print(f"Erro ao capturar os números de rastreamento: {e}")
         return []
     
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
 def verificar_status_entrega(browser, tracking_number):
     try:
+        # Abrir uma nova janela
+        browser.execute_script("window.open('about:blank', '_blank', 'width=800,height=600');")
+        time.sleep(1)  # Adicionar uma pequena pausa para garantir que a janela seja aberta
+        browser.switch_to.window(browser.window_handles[-1])
+        
         # Navegar para a URL fornecida
         browser.get('https://pathfinder.automationanywhere.com/challenges/salesorder-tracking.html#')
         
@@ -118,33 +133,36 @@ def verificar_status_entrega(browser, tracking_number):
         time.sleep(2)
         
         # Inserir o número de rastreamento
-        input_tracking = WebDriverWait(browser, 10).until(
-            EC.presence_of_element_located((By.ID, 'inputTrackingNo'))
-        )
-        input_tracking.clear()
-        input_tracking.send_keys(tracking_number)
+        input_field = browser.find_element(By.ID, 'inputTrackingNo')
+        input_field.clear()
+        input_field.send_keys(tracking_number)
         
-        # Clicar no botão de verificação de status
-        btn_check_status = WebDriverWait(browser, 10).until(
-            EC.presence_of_element_located((By.ID, 'btnCheckStatus'))
-        )
-        btn_check_status.click()
+        # Clicar no botão de verificar status
+        track_button = browser.find_element(By.ID, 'btnCheckStatus')
+        track_button.click()
         
-        # Esperar o resultado carregar
-        time.sleep(2)
-        
-        # Verificar se o campo "SCHEDULED DELIVERY" é igual a "Delivered"
-        scheduled_delivery = WebDriverWait(browser, 10).until(
-            EC.presence_of_element_located((By.XPATH, '//tr[td[@class="font-weight-bold" and text()="SCHEDULED DELIVERY"]]/td[2]'))
+        # Esperar até que a tabela de status de envio esteja visível
+        WebDriverWait(browser, 10).until(
+            EC.visibility_of_element_located((By.ID, 'shippingTable'))
         )
-        status = scheduled_delivery.text
-        return status == "Delivered"
-    
+        
+        # Capturar o status do envio
+        status_element = browser.find_element(By.XPATH, '//*[@id="shipmentStatus"]/tr[3]/td[2]')
+        status = status_element.text.strip()
+        print(f"Status do rastreamento {tracking_number}: {status}")
+        
+        # Fechar a janela e voltar para a janela original
+        browser.close()
+        browser.switch_to.window(browser.window_handles[0])
+        
+        return status
     except Exception as e:
-        print(f"Erro ao verificar o status de entrega para o número de rastreamento {tracking_number}: {e}")
-        return False
-    
-# Exemplo de uso dentro da função verificar_order_status
+        print(f"Erro ao verificar o status do rastreamento {tracking_number}: {e}")
+        # Fechar a janela e voltar para a janela original em caso de erro
+        browser.close()
+        browser.switch_to.window(browser.window_handles[0])
+        return None
+
 def verificar_order_status(browser):
     try:
         # --------------------------------- VERIFICAR STATUS DO PEDIDO ---------------------------------
@@ -156,9 +174,8 @@ def verificar_order_status(browser):
         
         # Selecionar a visualização de 50 itens
         selecionar_numero_itens(browser)
-        
-        while True:
-            try:
+        try:
+            while True:
                 # Encontrar todas as linhas da tabela
                 linhas = browser.find_elements(By.XPATH, '//table[@id="salesOrderDataTable"]/tbody/tr')
                 
@@ -181,60 +198,32 @@ def verificar_order_status(browser):
                                 tracking_numbers = capturar_tracking_numbers(browser)
                                 print(f"Números de rastreamento: {tracking_numbers}")
                                 
-                                # # Verificar o status de entrega para cada número de rastreamento
-                                # for tracking_number in tracking_numbers:
-                                #     if verificar_status_entrega(browser, tracking_number):
-                                #         print(f"O número de rastreamento {tracking_number} foi entregue.")
-                                #     else:
-                                #         print(f"O número de rastreamento {tracking_number} não foi entregue.")
+                                # Verificar o status de entrega para cada número de rastreamento
+                                todos_entregues = True
+                                for tracking_number in tracking_numbers:
+                                    status = verificar_status_entrega(browser, tracking_number)
+                                    
+                                    if status == 'Delivered':
+                                        print(f"O número de rastreamento {tracking_number} foi entregue.")
+                                    else:
+                                        print(f"O número de rastreamento {tracking_number} não foi entregue. Status: {status}")
+                                        todos_entregues = False
+                                        break  # Sair do loop for e continuar com o próximo item da lista principal
                                 
+                                if todos_entregues:
+                                    # Clicar no botão correspondente
+                                    clicar_elemento(browser, By.ID, 'salesOrderDataTable')
+                                    print("Botão de gerar fatura clicado.")
+                                    time.sleep(2)
                             except Exception as e:
-                                print(f"Erro ao clicar no botão de expandir: {e}")
+                                print(f"Erro ao processar o número de rastreamento: {e}")
                     except Exception as e:
                         print(f"Erro ao processar a linha da tabela: {e}")
-                break
-            except Exception as e:
-                print(f"Erro ao encontrar as linhas da tabela: {e}")
-                time.sleep(1)
+        except Exception as e:
+            print(f"Erro ao encontrar as linhas da tabela: {e}")
                 
     except Exception as e:
         print(f"Erro ao verificar o status do pedido: {e}")
-
-def verificar_status_entrega(browser, tracking_number):
-    try:
-        # Navegar para a URL fornecida
-        browser.get('https://pathfinder.automationanywhere.com/challenges/salesorder-tracking.html#')
-        
-        # Esperar a página carregar
-        time.sleep(2)
-        
-        # Inserir o número de rastreamento
-        input_tracking = WebDriverWait(browser, 10).until(
-            EC.presence_of_element_located((By.ID, 'inputTrackingNo'))
-        )
-        input_tracking.clear()
-        input_tracking.send_keys(tracking_number)
-        
-        # Clicar no botão de verificação de status
-        btn_check_status = WebDriverWait(browser, 10).until(
-            EC.presence_of_element_located((By.ID, 'btnCheckStatus'))
-        )
-        btn_check_status.click()
-        
-        # Esperar o resultado carregar
-        time.sleep(2)
-        
-        # Verificar se o campo "SCHEDULED DELIVERY" é igual a "Delivered"
-        scheduled_delivery = WebDriverWait(browser, 10).until(
-            EC.presence_of_element_located((By.XPATH, '//tr[td[@class="font-weight-bold" and text()="SCHEDULED DELIVERY"]]/td[2]'))
-        )
-        status = scheduled_delivery.text
-        return status == "Delivered"
-    
-    except Exception as e:
-        print(f"Erro ao verificar o status de entrega para o número de rastreamento {tracking_number}: {e}")
-        return False
-                
 
 def main():
     try:
@@ -257,7 +246,7 @@ def main():
         browser.get(link)
 
         acessar_sistema(browser)
-        time.sleep(0.5)
+        time.sleep(2)
 
         login(browser)
         verificar_order_status(browser)
